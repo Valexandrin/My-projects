@@ -26,7 +26,19 @@ class Cell:
 
 game_field = [[Cell(i, j) for i in range(0, FIELD, SIZE)] for j in range(0, FIELD, SIZE)]
 
-# grip = False
+obj_1 = tk.Canvas(root, width=SIZE, height=SIZE)
+obj_1.place(x=250, y=250)
+obj_1.create_image(0, 0, image=bl_img, anchor = tk.NW)
+
+
+def grip(event):
+    x = root.winfo_pointerx() - root.winfo_rootx()
+    y = root.winfo_pointery() - root.winfo_rooty()
+    event.widget.place(x =x, y =y, anchor = tk.CENTER)
+
+obj_1.bind("<B1-Motion>", grip)
+
+
 
 while True:
     canv.update()
