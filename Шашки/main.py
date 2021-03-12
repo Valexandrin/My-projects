@@ -1,17 +1,19 @@
-import pygame as pg
+import tkinter as tk
+import time
 
 SIZE = 100
 FIELD = 800
-FPS = 3
 
-WHITE = (255, 211, 155)
-BLACK = (205, 102, 29)
+WHITE = "#FFD39B"
+BLACK = "#CD661D"
 
-pg.init()
-sc = pg.display.set_mode([FIELD, FIELD])
-timer = pg.time.Clock()
-wh_img = pg.image.load('white.png')
-bl_img = pg.image.load('black.png')
+root = tk.Tk()
+fr = tk.Frame(root)
+canv = tk.Canvas(root, width=FIELD, height=FIELD)
+canv.pack()
+
+wh_img = tk.PhotoImage(file="white.png")
+bl_img = tk.PhotoImage(file="black.png")
 
 
 class Cell:
@@ -19,17 +21,13 @@ class Cell:
         self.x = x
         self.y = y
         self.color = BLACK if (x + y) / SIZE % 2 != 0 else WHITE
-        pg.draw.rect(sc, self.color, (x, y, SIZE, SIZE))
+        canv.create_rectangle((x, y, x + SIZE, y + SIZE), fill=self.color)
 
 
-cells = [[Cell(i, j) for i in range(0, FIELD, SIZE)] for j in range(0, FIELD, SIZE)]
-# white_checkers =
+game_field = [[Cell(i, j) for i in range(0, FIELD, SIZE)] for j in range(0, FIELD, SIZE)]
+
+# grip = False
 
 while True:
-
-    pg.display.flip()
-    timer.tick(FPS)
-
-    for event in pg.event.get():
-        if event.type == pg.QUIT:
-            exit()
+    canv.update()
+    time.sleep(0.03)
