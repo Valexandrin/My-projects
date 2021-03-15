@@ -24,7 +24,11 @@ class Cell:
         self.y = y
         self.figure = 0
         self.color = BLACK if (x + y) % 2 != 0 else WHITE
-        canv.create_rectangle((x * SIZE, y * SIZE, (x + 1) * SIZE, (y + 1) * SIZE), fill=self.color)
+        self.id = canv.create_rectangle((x * SIZE, y * SIZE, (x + 1) * SIZE, (y + 1) * SIZE),
+                                        fill=self.color)
+
+    def clicked(self):
+        canv.itemconfig(self.id, outline="green", width=7)
 
 
 for cell_row in range(0, 8):
@@ -37,7 +41,6 @@ for cell_row in range(0, 8):
         field += [cell]
 
 for cell in field:
-    print(cell.figure)
     if cell.figure == 2:
         checker = canv.create_image(cell.x * SIZE, cell.y * SIZE, image=bl_img, anchor=tk.NW)
     elif cell.figure == 1:
@@ -45,13 +48,13 @@ for cell in field:
 
 
 def grip(event):
-    x = root.winfo_pointerx() - root.winfo_rootx()
-    y = root.winfo_pointery() - root.winfo_rooty()
-    event.widget.place(x=x, y=y, anchor=tk.CENTER)
+    for cell in field:
+        if cell.x == event.x // 100 and cell.y == event.y // 100 and cell.figure == 1:
+            print(cell.x, cell.y)
+            cell.clicked()
 
-
-# obj_1.bind("<B1-Motion>", grip)
 
 while True:
+    canv.bind("<Button-1>", grip)
     canv.update()
     time.sleep(0.03)
