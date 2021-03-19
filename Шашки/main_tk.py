@@ -16,7 +16,7 @@ wh_img = tk.PhotoImage(file="white.png")
 bl_img = tk.PhotoImage(file="black.png")
 
 player = 1
-player_dict = 0
+player_dict = None
 pl1_cells_book = {}
 selected_cell = []
 available_cells = []
@@ -41,7 +41,6 @@ class Cell:
 
     def move(self, finish_cell):
         player_dict.pop((self.x, self.y)).move(finish_cell.x, finish_cell.y)
-
         self.status = 0
         finish_cell.status = 1
         self.released()
@@ -52,7 +51,7 @@ class Checker:
     def __init__(self, x, y):
         self.x = x
         self.y = y
-        self.id = 0
+        self.id = None
 
     def move(self, *args):
         self.x, self.y = args
@@ -84,10 +83,12 @@ for row in field:
             wh_checkers[cell.x, cell.y] = WhChecker(cell.x, cell.y)
 
 # dict of neighbors of all black cells
-for i in range(1, 8):
+for i in range(0, 8):
     for j in range(8):
         if field[i][j].color == BLACK:
-            if j == 0:
+            if i == 0:
+                pl1_cells_book[i, j] = []
+            elif j == 0:
                 pl1_cells_book[i, j] = [field[i - 1][j + 1]]
             elif j == 7:
                 pl1_cells_book[i, j] = [field[i - 1][j - 1]]
@@ -99,24 +100,21 @@ def check_action(event):
     if field[event.y // SIZE][event.x // SIZE] in available_cells:
         finish_cell = available_cells[available_cells.index(field[event.y // SIZE][event.x // SIZE])]
         selected_cell.pop().move(finish_cell)
-        print("Ход")
     else:
         selected_cell.pop().released()
         [available_cells.pop().released() for _ in range(len(available_cells))]
         grip(event)
-        print("Перезахват")
 
 
 def grip(event):
-    #TODO: add a check of a checker on clicked cell
-    print("Захват")
-    for cell in pl1_cells_book[event.y // SIZE, event.x // SIZE]:
-        if cell.status == 0:
-            cell.select("yellow")
-            available_cells.append(cell)
-    if available_cells:
-        field[event.y // SIZE][event.x // SIZE].select("green")
-        selected_cell.append(field[event.y // SIZE][event.x // SIZE])
+    if field[event.y // SIZE][event.x // SIZE].status != 0:
+        for cell in pl1_cells_book[event.y // SIZE, event.x // SIZE]:
+            if cell.status == 0:
+                cell.select("yellow")
+                available_cells.append(cell)
+        if available_cells:
+            field[event.y // SIZE][event.x // SIZE].select("green")
+            selected_cell.append(field[event.y // SIZE][event.x // SIZE])
 
 
 while True:
