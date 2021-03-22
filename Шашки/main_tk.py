@@ -18,8 +18,9 @@ bl_img = tk.PhotoImage(file="black.png")
 player = 1
 player_dict = None
 pl1_cells_book = {}
+pl2_cells_book = {}
 selected_cell = []
-available_cells = []
+avlbl_cells = []
 bl_checkers = {}
 wh_checkers = {}
 
@@ -40,11 +41,13 @@ class Cell:
         canv.itemconfig(self.id, outline="black", width=1)
 
     def move(self, finish_cell):
+        global player
         player_dict.pop((self.x, self.y)).move(finish_cell.x, finish_cell.y)
         self.status = 0
-        finish_cell.status = 1
+        finish_cell.status = player
         self.released()
-        [available_cells.pop().released() for _ in range(len(available_cells))]
+        [avlbl_cells.pop().released() for _ in range(len(avlbl_cells))]
+        player = 1 if player == 2 else 2
 
 
 class Checker:
@@ -71,8 +74,8 @@ class BlChecker(Checker):
         self.id = canv.create_image(x * SIZE, y * SIZE, image=bl_img, anchor=tk.NW)
 
 
+# Chess board creation
 field = [[Cell(j, i) for j in range(0, 8)] for i in range(0, 8)]
-
 for row in field:
     for cell in row:
         if cell.y < 3 and cell.color == BLACK:
@@ -82,7 +85,7 @@ for row in field:
             cell.status = 1
             wh_checkers[cell.x, cell.y] = WhChecker(cell.x, cell.y)
 
-# dict of neighbors of all black cells
+# Player_1 dict of neighbors of all black cells
 for i in range(0, 8):
     for j in range(8):
         if field[i][j].color == BLACK:
@@ -95,38 +98,64 @@ for i in range(0, 8):
             else:
                 pl1_cells_book[i, j] = [field[i - 1][j - 1], field[i - 1][j + 1]]
 
+# Player_2 dict of neighbors of all black cells
+for i in range(0, 8):
+    for j in range(8):
+        if field[i][j].color == BLACK:
+            if i == 7:
+                pl2_cells_book[i, j] = []
+            elif j == 0:
+                pl2_cells_book[i, j] = [field[i + 1][j + 1]]
+            elif j == 7:
+                pl2_cells_book[i, j] = [field[i + 1][j - 1]]
+            else:
+                pl2_cells_book[i, j] = [field[i + 1][j - 1], field[i + 1][j + 1]]
+
 
 def check_action(event):
-    if field[event.y // SIZE][event.x // SIZE] in available_cells:
-        finish_cell = available_cells[available_cells.index(field[event.y // SIZE][event.x // SIZE])]
+    i = event.y
+    j = event.x
+    if field[i // SIZE][j // SIZE] in avlbl_cells:
+        finish_cell = avlbl_cells[avlbl_cells.index(field[i // SIZE][j // SIZE])]
         selected_cell.pop().move(finish_cell)
     else:
         selected_cell.pop().released()
-        [available_cells.pop().released() for _ in range(len(available_cells))]
+        [avlbl_cells.pop().released() for _ in range(len(avlbl_cells))]
         grip(event)
 
 
 def grip(event):
-    if field[event.y // SIZE][event.x // SIZE].status != 0:
-        for cell in pl1_cells_book[event.y // SIZE, event.x // SIZE]:
+    i = event.y
+    j = event.x
+    if field[i // SIZE][j // SIZE].status == player:
+        for cell in cells_book[i // SIZE, j // SIZE]:
             if cell.status == 0:
                 cell.select("yellow")
-                available_cells.append(cell)
-        if available_cells:
-            field[event.y // SIZE][event.x // SIZE].select("green")
-            selected_cell.append(field[event.y // SIZE][event.x // SIZE])
+                avlbl_cells.append(cell)
+        if avlbl_cells:
+            field[i // SIZE][j // SIZE].select("green")
+            selected_cell.append(field[i // SIZE][j // SIZE])
+
+
+def get_path():
+    pass
 
 
 while True:
     if player == 1:
         player_dict = wh_checkers
+        cells_book = pl1_cells_book
         if not selected_cell:
             canv.bind("<Button-1>", grip)
         else:
             canv.bind("<Button-1>", check_action)
     else:
         player_dict = bl_checkers
-        pass
+        cells_book = pl2_cells_book
+        if not selected_cell:
+            canv.bind("<Button-1>", grip)
+        else:
+            canv.bind("<Button-1>", check_action)
 
     canv.update()
     time.sleep(0.03)
