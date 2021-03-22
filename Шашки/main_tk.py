@@ -57,8 +57,16 @@ class Checker:
         self.id = None
 
     def move(self, *args):
+        old_x, old_y = self.x, self.y
         self.x, self.y = args
-        canv.coords(self.id, self.x * SIZE, self.y * SIZE)
+        step_x = self.x - old_x
+        step_y = self.y - old_y
+        for i in range(26):
+            canv.coords(self.id,
+                        (old_x + step_x * i * 0.04) * SIZE,
+                        (old_y + step_y * i * 0.04) * SIZE)
+            canv.update()
+            time.sleep(0.01)
         player_dict[self.x, self.y] = self
 
 
