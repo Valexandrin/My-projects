@@ -1,4 +1,5 @@
 from random import choice
+from collections import defaultdict
 import tkinter as tk
 import time
 
@@ -18,7 +19,7 @@ bl_img = tk.PhotoImage(file="black.png")
 
 selected_cell = []
 avlbl_cells = []
-obligatory_cells = []
+obligatory_cells = defaultdict(list)
 pl1_cells_book = {}
 pl2_cells_book = {}
 bl_checkers = {}
@@ -41,12 +42,16 @@ class Cell:
         canv.itemconfig(self.id, outline="black", width=1)
 
     def move(self, finish_cell):
-        player_dict.pop((self.x, self.y)).move(finish_cell.x, finish_cell.y)
+        gm.player_dict.pop((self.x, self.y)).move(finish_cell.x, finish_cell.y)
         self.status = 0
-        finish_cell.status = player
+        finish_cell.status = gm.player
         self.released()
         [avlbl_cells.pop().released() for _ in range(len(avlbl_cells))]
-        gm.change_player()
+        # TODO: checking below should be corrected
+        if finish_cell not in obligatory_cells.keys():
+            gm.change_player()
+        elif not gm.obligations_check():
+                gm.change_player()
 
 
 class Checker:
@@ -66,7 +71,7 @@ class Checker:
                         (old_y + step_y * i * 0.04) * SIZE)
             canv.update()
             time.sleep(0.01)
-        player_dict[self.x, self.y] = self
+        gm.player_dict[self.x, self.y] = self
 
 
 class WhChecker(Checker):
@@ -82,41 +87,62 @@ class BlChecker(Checker):
 
 
 class GameManager:
-    def obligatory_move(self):
+    def __init__(self):
+        self.player = choice([1, 2])
+        self.player_dict = wh_checkers if self.player == 1 else bl_checkers
+        self.cells_book = pl1_cells_book if self.player == 1 else pl2_cells_book
+
+    def change_player(self):
+        self.player = 1 if self.player == 2 else 2
+        self.player_dict = wh_checkers if self.player == 1 else bl_checkers
+        self.cells_book = pl1_cells_book if self.player == 1 else pl2_cells_book
+        self.obligations_check()
+
+    def list_filling(self, i, j, status, lst):
+        for item in self.cells_book[i, j]:
+            if item and item.status == status:
+                lst.append(item)
+
+    def obligations_check(self):
+        obligatory_cells.clear()
         count = 0
-        for checker in player_dict.values():
-            neighbor = cells_book[checker.x, checker.y]
+        for checker in self.player_dict.values():
+            neighbor = self.cells_book[checker.x, checker.y]
             for i in range(2):
                 if neighbor[i]:
-                    if neighbor[i].status != player and neighbor[i].status != 0:
-                        next_neighbor = cells_book[neighbor[i].x, neighbor[i].y]
+                    if neighbor[i].status != self.player and neighbor[i].status != 0:
+                        next_neighbor = self.cells_book[neighbor[i].x, neighbor[i].y]
                         if next_neighbor[i] and next_neighbor[i].status == 0:
-                            obligatory_cells.append(field[checker.x][checker.y])
+                            obligatory_cells[field[checker.x][checker.y]].append(next_neighbor[i])
                             count += 1
-                            print(checker.x, checker.y)
-                            print(neighbor[i].x, neighbor[i].y)
-                            print(next_neighbor[i].x, next_neighbor[i].y)
         return True if count != 0 else False
 
     def grip(self, event):
-        i = event.x
-        j = event.y
-        if field[i // SIZE][j // SIZE].status == player:
-            for cell in cells_book[i // SIZE, j // SIZE]:
+        i = event.x//SIZE
+        j = event.y//SIZE
+        if field[i][j].status == self.player:
+            self.list_filling(i, j, 0, avlbl_cells)
+            """for cell in self.cells_book[i // SIZE, j // SIZE]:
                 if cell and cell.status == 0:
                     cell.select("yellow")
-                    avlbl_cells.append(cell)
+                    avlbl_cells.append(cell)"""
             if avlbl_cells:
-                field[i // SIZE][j // SIZE].select("green")
-                selected_cell.append(field[i // SIZE][j // SIZE])
+                field[i][j].select("green")
+                selected_cell.append(field[i][j])
+
+    def cut_down_way(self, i, j):
+        pass
 
     def check_action(self, event):
-        i = event.x
-        j = event.y
-        if field[i // SIZE][j // SIZE] in obligatory_cells:
-            pass
-        elif field[i // SIZE][j // SIZE] in avlbl_cells:
-            finish_cell = avlbl_cells[avlbl_cells.index(field[i // SIZE][j // SIZE])]
+        i = event.x//SIZE
+        j = event.y//SIZE
+        if field[i][j] in obligatory_cells.keys():
+            print(field[i][j])
+            selected_cell.append(field[i][j])
+            for i in obligatory_cells[field[i][j]]:
+                avlbl_cells.append(i)
+        elif field[i][j] in avlbl_cells:
+            finish_cell = avlbl_cells[avlbl_cells.index(field[i][j])]
             selected_cell.pop().move(finish_cell)
         else:
             selected_cell.pop().released()
@@ -124,21 +150,14 @@ class GameManager:
             self.grip(event)
 
     def get_path(self):
-        for checker in player_dict.values():
-            for cell in cells_book[checker.x, checker.y]:
+        for checker in self.player_dict.values():
+            for cell in self.cells_book[checker.x, checker.y]:
                 if cell and cell.status == 0:
                     selected_cell.append(field[checker.x][checker.y])
         random_cell = choice(selected_cell)
         selected_cell.clear()
-        for cell in cells_book[random_cell.x, random_cell.y]:
-            if cell and cell.status == 0:
-                avlbl_cells.append(cell)
+        self.list_filling(random_cell.x, random_cell.y, 0, avlbl_cells)
         random_cell.move(choice(avlbl_cells))
-
-    def change_player(self):
-        global player
-        player = 1 if player == 2 else 2
-        print(player)
 
 
 # Chess board creation
@@ -179,22 +198,16 @@ for i in range(0, 8):
                 pl2_cells_book[j, i] = [field[j - 1][i + 1], field[j + 1][i + 1]]
 
 gm = GameManager()
-player = choice([1, 2])
 
 while True:
-    if player == 1:
-        player_dict = wh_checkers
-        cells_book = pl1_cells_book
-        if selected_cell or gm.obligatory_move():
+    if gm.player == 1:
+        if selected_cell or obligatory_cells:
             canv.bind("<Button-1>", gm.check_action)
         else:
             canv.bind("<Button-1>", gm.grip)
-
     else:
-        player_dict = bl_checkers
-        cells_book = pl2_cells_book
-        if gm.obligatory_move():
-            # make move
+        if obligatory_cells:
+            # gm.change_player()
             pass
         else:
             gm.get_path()
