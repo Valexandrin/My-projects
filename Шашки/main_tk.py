@@ -19,6 +19,7 @@ bl_img = tk.PhotoImage(file="black.png")
 
 selected_cell = []
 avlbl_cells = []
+cutted_cells = {}
 obligatory_cells = defaultdict(list)
 pl1_cells_book = {}
 pl2_cells_book = {}
@@ -47,10 +48,18 @@ class Cell:
         finish_cell.status = gm.player
         self.released()
         [avlbl_cells.pop().released() for _ in range(len(avlbl_cells))]
-        if finish_cell not in obligatory_cells.keys():
+        if finish_cell in obligatory_cells[self]:
+            if not gm.obligations_check():
+                gm.change_player()
+                for item in cutted_cells.values():
+                    gm.player_dict.pop(item).move(-1, 0)
+                    i, j = item
+                    field[i][j].status = 0
+                    del gm.player_dict[-1, 0]
+                cutted_cells.clear()
+        else:
             gm.change_player()
-        elif not gm.obligations_check():
-            gm.change_player()
+        gm.obligations_check()
 
 
 class Checker:
@@ -71,6 +80,9 @@ class Checker:
             canv.update()
             time.sleep(0.01)
         gm.player_dict[self.x, self.y] = self
+
+    def remove(self):
+        pass
 
 
 class WhChecker(Checker):
@@ -95,7 +107,6 @@ class GameManager:
         self.player = 1 if self.player == 2 else 2
         self.player_dict = wh_checkers if self.player == 1 else bl_checkers
         self.cells_book = pl1_cells_book if self.player == 1 else pl2_cells_book
-        self.obligations_check()
 
     def list_filling(self, i, j, lst, *args, color=None, status=0):
         for item in self.cells_book[i, j]:
@@ -115,7 +126,10 @@ class GameManager:
                         next_neighbor = self.cells_book[neighbor[i].x, neighbor[i].y]
                         if next_neighbor[i] and next_neighbor[i].status == 0:
                             obligatory_cells[field[checker.x][checker.y]].append(next_neighbor[i])
+                            cutted_cells[field[checker.x][checker.y]] = neighbor[i].x, neighbor[i].y
                             count += 1
+        print(obligatory_cells)
+        print(cutted_cells)
         return True if count != 0 else False
 
     def grip(self, event):
@@ -148,10 +162,14 @@ class GameManager:
             self.check_action(event) if obligatory_cells else self.grip(event)
 
     def get_path(self, dict):
-        dict = dict.keys() if obligatory_cells else dict.values()
-        for checker in dict:
-            self.list_filling(checker.x, checker.y, selected_cell, True)
-        random_cell = choice(selected_cell) if len(selected_cell) > 1 else selected_cell.pop()
+        # TODO: don't check of cut down for all checkers after player's move.
+        #  Do it only for moved checker.
+        if obligatory_cells:
+            [selected_cell.append(item) for item in dict.keys()]
+        else:
+            for checker in dict.values():
+                self.list_filling(checker.x, checker.y, selected_cell, True)
+        random_cell = choice(selected_cell)
         selected_cell.clear()
         if obligatory_cells:
             for i in obligatory_cells[field[random_cell.x][random_cell.y]]:
@@ -201,6 +219,7 @@ for i in range(0, 8):
 gm = GameManager()
 
 while True:
+    #print("Wh: ", len(wh_checkers), "Bl: ", len(bl_checkers))
     if gm.player == 1:
         if selected_cell or obligatory_cells:
             canv.bind("<Button-1>", gm.check_action)
